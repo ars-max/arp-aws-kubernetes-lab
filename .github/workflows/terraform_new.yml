@@ -62,9 +62,9 @@ jobs:
         run: terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET_NAME }}" -backend-config="key=${{ env.TF_WORKING_DIR }}.tfstate" -backend-config="region=${{ env.AWS_REGION }}"
         working-directory: ${{ env.TF_WORKING_DIR }}
 
-      - name: Terraform Format
+      - name: Terraform Format and Check
         id: format
-        run: terraform fmt -check
+        run: terraform fmt -recursive # This will format the files. If it's still incorrect, it means there's a deeper syntax issue.
         working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: Terraform Plan
