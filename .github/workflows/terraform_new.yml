@@ -1,29 +1,32 @@
 # .github/workflows/terraform.yml
 
-name: Terraform Kubeadm Deployment
+name: Terraform Kubeadm Deployment (Manual)
 
 on:
-  push:
-    branches:
-      - main # Trigger on pushes to the main branch
-    paths:
-      - '**.tf'
-      - 'user-data-*.sh' # Trigger if user data scripts change
-  pull_request:
-    branches:
-      - main # Trigger on pull requests to the main branch
-    paths:
-      - '**.tf'
-      - 'user-data-*.sh'
-  workflow_dispatch: # Allows manual triggering
+  workflow_dispatch: # This allows manual triggering from the GitHub Actions UI
     inputs:
-      destroy:
-        description: 'Set to true to destroy infrastructure'
+      action_type:
+        description: 'Terraform action to perform'
+        required: true
+        default: 'plan'
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+      target_branch:
+        description: 'Branch to run Terraform on'
+        required: true
+        default: 'main'
+        type: string
+      confirm_destroy:
+        description: 'Type "destroy" to confirm infrastructure destruction for destroy action'
         required: false
-        default: 'false'
+        default: ''
+        type: string
 
 env:
-  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }} # Use a variable if defined, otherwise default
+  AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }} # Use a variable if defined, otherwise default
   TF_WORKING_DIR: . # Directory containing your Terraform files
 
 jobs:
@@ -33,12 +36,14 @@ jobs:
     environment: production # Or 'dev' for development/testing environment
     permissions:
       contents: read
-      pull-requests: write
+      pull-requests: write # Still useful if you want to generate PR comments on a 'plan'
       id-token: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.target_branch }} # Checkout the specified branch
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -64,48 +69,34 @@ jobs:
 
       - name: Terraform Plan
         id: plan
-        if: github.event_name == 'pull_request' && github.event.inputs.destroy != 'true'
+        # Run plan only if action_type is 'plan' or 'apply'
+        if: github.event.inputs.action_type == 'plan' || github.event.inputs.action_type == 'apply'
         run: terraform plan -no-color -out=tfplan
         working-directory: ${{ env.TF_WORKING_DIR }}
-        continue-on-error: true
-
-      - name: Update Pull Request with Terraform Plan
-        uses: actions/github-script@v6
-        if: github.event_name == 'pull_request' && github.event.inputs.destroy != 'true'
-        with:
-          script: |
-            const output = `#### Terraform Plan 📖
-            \`\`\`terraform
-            ${process.env.PLAN_OUTPUT}
-            \`\`\`
-            `;
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: output
-            })
-           env:
-             PLAN_OUTPUT: ${{ steps.plan.outputs.stdout }}
+        continue-on-error: true # Allow plan to fail without stopping the workflow
 
       - name: Terraform Apply
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.inputs.destroy != 'true'
-        run: terraform apply -auto-approve
+        # Run apply only if action_type is 'apply'
+        if: github.event.inputs.action_type == 'apply'
+        run: terraform apply -auto-approve tfplan # Apply the previously generated plan
         working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: Terraform Destroy
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.destroy == 'true'
+        # Run destroy only if action_type is 'destroy' AND confirmation matches
+        if: github.event.inputs.action_type == 'destroy' && github.event.inputs.confirm_destroy == 'destroy'
         run: terraform destroy -auto-approve
         working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: Get Master Node Public IP
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        # Only run this if apply was successful
+        if: success() && github.event.inputs.action_type == 'apply'
         id: get_ip
         run: echo "MASTER_IP=$(terraform output -raw master_public_ip)" >> $GITHUB_OUTPUT
         working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: Display Kubeconfig Instructions
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        # Only display instructions if apply was successful
+        if: success() && github.event.inputs.action_type == 'apply'
         run: |
           echo "## Kubeconfig Retrieval and Worker Node Join Instructions"
           echo "---"
@@ -126,5 +117,3 @@ jobs:
           echo "   Example: ssh -i ~/.ssh/${{ vars.cluster_name || 'my-kubeadm-lab'}}-key.pem ubuntu@<WORKER_PRIVATE_IP>"
           echo "3. Run the join command (as sudo): sudo <PASTED_JOIN_COMMAND>"
           echo "---"
-        # Using echo to print to action logs, which are accessible from GitHub UI
-        # You can also use `actions/upload-artifact` to upload a file with these instructions.
