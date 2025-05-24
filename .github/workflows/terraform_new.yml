@@ -23,7 +23,7 @@ on:
         default: 'false'
 
 env:
-  AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }} # Use a variable if defined, otherwise default
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }} # Use a variable if defined, otherwise default
   TF_WORKING_DIR: . # Directory containing your Terraform files
 
 jobs:
@@ -85,8 +85,8 @@ jobs:
               repo: context.repo.repo,
               body: output
             })
-          env:
-            PLAN_OUTPUT: ${{ steps.plan.outputs.stdout }}
+           env:
+             PLAN_OUTPUT: ${{ steps.plan.outputs.stdout }}
 
       - name: Terraform Apply
         if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.inputs.destroy != 'true'
