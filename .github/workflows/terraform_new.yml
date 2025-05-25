@@ -59,7 +59,7 @@ jobs:
 
       - name: Terraform Init
         id: init
-        run: terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET_NAME }}" -backend-config="key=${{ env.TF_WORKING_DIR }}.tfstate" -backend-config="region=${{ env.AWS_REGION }}"
+        run: terraform init
         working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: Terraform Format and Check
