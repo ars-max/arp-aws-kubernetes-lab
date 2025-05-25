@@ -33,7 +33,7 @@ variable "instance_type_worker" {
 variable "worker_node_count" {
   description = "Number of worker nodes to create"
   type        = number
-  default     = 4
+  default     = 6
 }
 
 variable "public_key" {
