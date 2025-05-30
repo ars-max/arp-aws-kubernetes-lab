@@ -35,13 +35,15 @@ sudo swapoff -a
 sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
 
 # Add Kubernetes apt repository
+# --- FIX APPLIED HERE (formerly line 36, now line 39) ---
 # Use the new variable K8S_RELEASE_SEGMENT calculated in Terraform
 curl -fsSL https://pkgs.k8s.io/core:/stable:/${K8S_RELEASE_SEGMENT}/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+# --- End FIX ---
 
 # --- Fix for Kubernetes repository ---
 # Use the new variable K8S_RELEASE_SEGMENT
 cat <<EOF_K8S_REPO | sudo tee /etc/apt/sources.list.d/kubernetes.list
-# Escaped $ for K8S_RELEASE_SEGMENT inside the heredoc (though K8S_RELEASE_SEGMENT is from TF anyway, better safe)
+# Escaped $ for K8S_RELEASE_SEGMENT inside the heredoc
 deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/${K8S_RELEASE_SEGMENT}/deb/ /
 EOF_K8S_REPO
 # --- End Fix for Kubernetes repository ---
