@@ -1,9 +1,10 @@
 #!/bin/bash
 set -euxo pipefail
 
-# Variables passed from Terraform
+# Variables passed from Terraform (now includes kubernetes_release_version_segment)
 KUBERNETES_VERSION="${kubernetes_version}"
 POD_CIDR="${pod_cidr}"
+K8S_RELEASE_SEGMENT="${kubernetes_release_version_segment}" # New variable from Terraform
 
 # Install containerd
 sudo apt-get update
@@ -33,13 +34,15 @@ sudo swapoff -a
 sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
 
 # Add Kubernetes apt repository
-curl -fsSL https://pkgs.k8s.io/core:/stable:/v${KUBERNETES_VERSION%.*}/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+# --- FIX APPLIED HERE (formerly line 36) ---
+# Use the new variable K8S_RELEASE_SEGMENT calculated in Terraform
+curl -fsSL https://pkgs.k8s.io/core:/stable:/${K8S_RELEASE_SEGMENT}/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+# --- End FIX ---
 
-# --- Fix for Kubernetes repository (now line 42) ---
-# Apply the same cat <<EOF fix for the Kubernetes deb line.
-# Note the unique delimiter EOF_K8S_REPO to prevent conflicts.
+# --- Fix for Kubernetes repository (formerly line 42) ---
+# Use the new variable K8S_RELEASE_SEGMENT
 cat <<EOF_K8S_REPO | sudo tee /etc/apt/sources.list.d/kubernetes.list
-deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v${KUBERNETES_VERSION%.*}/deb/ /
+deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/${K8S_RELEASE_SEGMENT}/deb/ /
 EOF_K8S_REPO
 # --- End Fix for Kubernetes repository ---
 
