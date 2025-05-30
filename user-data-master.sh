@@ -14,7 +14,7 @@ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o 
 # Corrected line for Docker repository:
 # We escape the outer $ of $() with another $, so Terraform sees $$() and passes $() to the script.
 # The inner $ in $(dpkg...) does not need escaping as it's within the shell's command substitution.
-echo "deb [arch=$$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $$(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+echo "deb [arch=$$((dpkg --print-architecture)) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $$((lsb_release -cs)) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
 sudo apt-get update
 sudo apt-get install -y containerd.io
