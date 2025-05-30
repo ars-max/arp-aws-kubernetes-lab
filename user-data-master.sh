@@ -11,9 +11,18 @@ sudo apt-get install -y ca-certificates curl gnupg lsb-release
 sudo mkdir -p /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 
-# Corrected line for Docker repository:
-# Ensure the shell's command substitutions $() are passed literally by escaping the initial $
-echo "deb [arch=$$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $$(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+# --- FIX APPLIED HERE: Using cat <<EOF for robustness ---
+# Get architecture and codename using shell command substitution directly
+ARCH=$(dpkg --print-architecture)
+CODENAME=$(lsb_release -cs)
+
+# Use cat <<EOF to write the deb line, which prevents Terraform's templatefile
+# from trying to interpret special characters within the string.
+# Shell variables (${ARCH} and ${CODENAME}) will be expanded by the shell at runtime.
+cat <<EOF | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+deb [arch=${ARCH} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu ${CODENAME} stable
+EOF
+# --- END FIX ---
 
 sudo apt-get update
 sudo apt-get install -y containerd.io
