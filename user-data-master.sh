@@ -12,11 +12,12 @@ sudo apt-get install -y ca-certificates curl gnupg lsb-release
 sudo mkdir -p /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 
-# --- Fix for Docker repository (previously line 34) ---
+# --- Fix for Docker repository ---
 ARCH=$(dpkg --print-architecture)
 CODENAME=$(lsb_release -cs)
 cat <<EOF_DOCKER_REPO | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-deb [arch=${ARCH} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu ${CODENAME} stable
+# Escaped $ for ARCH and CODENAME so shell interprets them, not Terraform templatefile
+deb [arch=$${ARCH} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $${CODENAME} stable
 EOF_DOCKER_REPO
 # --- End Fix for Docker repository ---
 
@@ -34,14 +35,13 @@ sudo swapoff -a
 sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
 
 # Add Kubernetes apt repository
-# --- FIX APPLIED HERE (formerly line 36) ---
 # Use the new variable K8S_RELEASE_SEGMENT calculated in Terraform
 curl -fsSL https://pkgs.k8s.io/core:/stable:/${K8S_RELEASE_SEGMENT}/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-# --- End FIX ---
 
-# --- Fix for Kubernetes repository (formerly line 42) ---
+# --- Fix for Kubernetes repository ---
 # Use the new variable K8S_RELEASE_SEGMENT
 cat <<EOF_K8S_REPO | sudo tee /etc/apt/sources.list.d/kubernetes.list
+# Escaped $ for K8S_RELEASE_SEGMENT inside the heredoc (though K8S_RELEASE_SEGMENT is from TF anyway, better safe)
 deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/${K8S_RELEASE_SEGMENT}/deb/ /
 EOF_K8S_REPO
 # --- End Fix for Kubernetes repository ---
