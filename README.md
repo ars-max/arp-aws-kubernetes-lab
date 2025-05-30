@@ -31,9 +31,26 @@ kubeconfig_instructions = <<EOT
 To get your kubeconfig file:
 1. SSH into the master node: 44.204.39.53
 2. Run: sudo cat /etc/kubernetes/admin.conf > kubeconfig
-3. Copy 'kubeconfig' file to your local machine: scp -i ~/.ssh/my-kubeadm-lab-key.pem ubuntu@44.204.39.53:~/kubeconfig .
-4. Set KUBECONFIG environment variable: export KUBECONFIG=./kubeconfig
-5. Test with: kubectl get nodes
+
+   ubuntu@ip-10-0-101-197:/etc/kubernetes$ cd ..
+ubuntu@ip-10-0-101-197:/etc$ ls -ltr | grep -i kubernetes/
+ubuntu@ip-10-0-101-197:/etc$ sudo chown ubuntu:ubuntu kubernetes/
+ubuntu@ip-10-0-101-197:/etc$ cd kubernetes/
+ubuntu@ip-10-0-101-197:/etc/kubernetes$ ls -ltr
+total 36
+drwxr-xr-x 3 root root 4096 May 30 05:58 pki
+-rwxrwxrwx 1 root root 5648 May 30 05:58 admin.conf
+-rw------- 1 root root 5676 May 30 05:58 controller-manager.conf
+-rw------- 1 root root 5624 May 30 05:58 scheduler.conf
+drwxrwxr-x 2 root root 4096 May 30 05:58 manifests
+-rw------- 1 root root 2004 May 30 05:58 kubelet.conf
+ubuntu@ip-10-0-101-197:/etc/kubernetes$ sudo cat /etc/kubernetes/admin.conf > kubeconfig
+
+
+
+4. Copy 'kubeconfig' file to your local machine: scp -i ~/.ssh/my-kubeadm-lab-key.pem ubuntu@44.204.39.53:~/kubeconfig .
+5. Set KUBECONFIG environment variable: export KUBECONFIG=./kubeconfig
+6. Test with: kubectl get nodes
 EOT
 master_private_ip = "10.0.101.197"
 master_public_ip = "44.204.39.53"
