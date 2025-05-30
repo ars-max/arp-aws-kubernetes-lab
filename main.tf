@@ -113,9 +113,12 @@ resource "aws_instance" "master" {
   vpc_security_group_ids      = [aws_security_group.kubernetes_sg.id]
   subnet_id                   = module.vpc.public_subnets[0] # Place master in public subnet for direct access (lab setup)
   associate_public_ip_address = true
-  user_data_base64            = base64encode(templatefile("${path.module}/user-data-master.sh", {
-    kubernetes_version = var.kubernetes_version
-    pod_cidr           = var.pod_cidr
+  user_data_base64 = base64encode(templatefile("${path.module}/user-data-master.sh", {
+    kubernetes_version         = var.kubernetes_version
+    pod_cidr                   = var.pod_cidr
+    # Calculate the major.minor version string (e.g., "v1.28" from "1.28.1")
+    # using HCL string functions.
+    kubernetes_release_version_segment = "v" + replace(var.kubernetes_version, "/\\.[^.]*$/", "")
   }))
   tags = {
     Name = "${var.cluster_name}-master"
