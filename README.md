@@ -25,6 +25,28 @@ sudo systemctl status kubelet
 Check Docker/containerd status:
 Bash
 
+
+Outputs:
+kubeconfig_instructions = <<EOT
+To get your kubeconfig file:
+1. SSH into the master node: 44.204.39.53
+2. Run: sudo cat /etc/kubernetes/admin.conf > kubeconfig
+3. Copy 'kubeconfig' file to your local machine: scp -i ~/.ssh/my-kubeadm-lab-key.pem ubuntu@44.204.39.53:~/kubeconfig .
+4. Set KUBECONFIG environment variable: export KUBECONFIG=./kubeconfig
+5. Test with: kubectl get nodes
+EOT
+master_private_ip = "10.0.101.197"
+master_public_ip = "44.204.39.53"
+ssh_command_master = "ssh -i ~/.ssh/my-kubeadm-lab-key.pem ubuntu@44.204.39.53"
+worker_private_ips = [
+  "10.0.1.161",
+  "10.0.2.9",
+  "10.0.1.217",
+  "10.0.2.123",
+  "10.0.1.198",
+  "10.0.2.138",
+]
+
 sudo systemctl status containerd
 Look for the kubeadm_join_command.sh file if your master script is designed to generate it and distribute it.
 
