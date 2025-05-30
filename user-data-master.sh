@@ -1,14 +1,10 @@
 #!/bin/bash
 set -euxo pipefail
 
-# Variables passed from Terraform (these are directly interpolated by Terraform)
-KUBERNETES_VERSION="${kubernetes_version}"
-POD_CIDR="${pod_cidr}"
-
-# K8S_RELEASE_SEGMENT is a SHELL variable whose value comes from Terraform.
-# This line is fine because Terraform interpolates ${kubernetes_release_version_segment}.
-# But K8S_RELEASE_SEGMENT itself is a shell variable for the rest of the script.
-K8S_RELEASE_SEGMENT="${kubernetes_release_version_segment}"
+# Directly use variables passed from Terraform (no re-assignment to shell variables needed)
+# kubernetes_version is used as ${kubernetes_version}
+# pod_cidr is used as ${pod_cidr}
+# kubernetes_release_version_segment is used as ${kubernetes_release_version_segment}
 
 # Install containerd
 sudo apt-get update
@@ -17,10 +13,10 @@ sudo mkdir -p /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 
 # --- Fix for Docker repository ---
+# ARCH and CODENAME are shell variables, so their usage inside heredocs needs $$
 ARCH=$(dpkg --print-architecture)
 CODENAME=$(lsb_release -cs)
 cat <<EOF_DOCKER_REPO | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-# Escaped $ for ARCH and CODENAME so shell interprets them, not Terraform templatefile
 deb [arch=$${ARCH} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $${CODENAME} stable
 EOF_DOCKER_REPO
 # --- End Fix for Docker repository ---
@@ -39,32 +35,30 @@ sudo swapoff -a
 sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
 
 # Add Kubernetes apt repository
-# --- FIX APPLIED HERE (Line 39/40 in your output) ---
-# K8S_RELEASE_SEGMENT is a shell variable, so escape the $
-curl -fsSL https://pkgs.k8s.io/core:/stable:/$${K8S_RELEASE_SEGMENT}/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-# --- End FIX ---
+# Use the direct Terraform variable: kubernetes_release_version_segment
+curl -fsSL https://pkgs.k8s.io/core:/stable:/${kubernetes_release_version_segment}/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
 
 # --- Fix for Kubernetes repository (inside heredoc) ---
-# K8S_RELEASE_SEGMENT is a shell variable, so escape the $ here too
+# Use the direct Terraform variable: kubernetes_release_version_segment
 cat <<EOF_K8S_REPO | sudo tee /etc/apt/sources.list.d/kubernetes.list
-deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/$${K8S_RELEASE_SEGMENT}/deb/ /
+deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/${kubernetes_release_version_segment}/deb/ /
 EOF_K8S_REPO
 # --- End Fix for Kubernetes repository ---
 
 sudo apt-get update
 
 # Install kubelet, kubeadm, kubectl
-# KUBERNETES_VERSION is a direct Terraform variable, so no $$ needed here
-sudo apt-get install -y kubelet="${KUBERNETES_VERSION}-*" kubeadm="${KUBERNETES_VERSION}-*" kubectl="${KUBERNETES_VERSION}-*"
+# Use the direct Terraform variable: kubernetes_version
+sudo apt-get install -y kubelet="${kubernetes_version}-*" kubeadm="${kubernetes_version}-*" kubectl="${kubernetes_version}-*"
 sudo apt-mark hold kubelet kubeadm kubectl
 
 # Initialize Kubernetes Master
-# POD_CIDR and hostname -I are shell commands/variables, so no $$ needed for POD_CIDR.
-# $(hostname -I | awk '{print $1}') is a shell command substitution, so no $$ needed.
-sudo kubeadm init --pod-network-cidr=${POD_CIDR} --kubernetes-version=v${KUBERNETES_VERSION} --apiserver-advertise-address=$(hostname -I | awk '{print $1}')
+# Use direct Terraform variables: pod_cidr and kubernetes_version
+# $(hostname -I | awk '{print $1}') is a shell command substitution, no $$ needed for it.
+sudo kubeadm init --pod-network-cidr=${pod_cidr} --kubernetes-version=v${kubernetes_version} --apiserver-advertise-address=$(hostname -I | awk '{print $1}')
 
 # Setup kubeconfig for ubuntu user
-# HOME and id -u/id -g are shell variables/commands, so no $$ needed here
+# HOME and id -u/id -g are shell variables/commands, no $$ needed here
 mkdir -p "$HOME"/.kube
 sudo cp -i /etc/kubernetes/admin.conf "$HOME"/.kube/config
 sudo chown "$(id -u)":"$(id -g)" "$HOME"/.kube/config
