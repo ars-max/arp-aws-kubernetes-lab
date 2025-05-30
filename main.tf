@@ -117,8 +117,8 @@ resource "aws_instance" "master" {
     kubernetes_version         = var.kubernetes_version
     pod_cidr                   = var.pod_cidr
     # Calculate the major.minor version string (e.g., "v1.28" from "1.28.1")
-    # using HCL string functions.
-    kubernetes_release_version_segment = "v" + replace(var.kubernetes_version, "/\\.[^.]*$/", "")
+    # using HCL string functions and string interpolation.
+    kubernetes_release_version_segment = "v${replace(var.kubernetes_version, "/\\.[^.]*$/", "")}"
   }))
   tags = {
     Name = "${var.cluster_name}-master"
