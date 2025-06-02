@@ -67,3 +67,7 @@ worker_private_ips = [
 sudo systemctl status containerd
 Look for the kubeadm_join_command.sh file if your master script is designed to generate it and distribute it.
 
+
+COmmand to copy the key file from local to ec2 master
+scp -i ~/.ssh/my-kubeadm-lab-key.pem ~/.ssh/my-kubeadm-lab-key.pem ubuntu@44.203.81.152:~/
+
